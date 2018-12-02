@@ -1,3 +1,5 @@
+from urllib.error import URLError
+from socket import timeout
 import urllib.request
 import urllib.parse
 import pandas as pd
@@ -5,8 +7,8 @@ import numpy as np
 import json
 
 
-def personality_type(forms, url = "https://www.16personalities.com/test-results"):
-    req    = urllib.request.Request(url)
+def personality_type(forms, url="https://www.16personalities.com/test-results"):
+    req = urllib.request.Request(url)
     req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36")
     method = urllib.parse.urlencode({"_token":"8mTxGLIQeboCvPsjAUerjN6rsQm2LzvoxwGRbLVO",
                                      "options":"on","code":"",
@@ -22,9 +24,13 @@ def personality_type(forms, url = "https://www.16personalities.com/test-results"
                                      "a46":forms[45],"a47":forms[46],"a48":forms[47],"a49":forms[48],"a50":forms[49],
                                      "a51":forms[50],"a52":forms[51],"a53":forms[52],"a54":forms[53],"a55":forms[54],
                                      "a56":forms[55],"a57":forms[56],"a58":forms[57],"a59":forms[58],"a60":forms[59],}).encode("utf-8")
-    resp = urllib.request.urlopen(req, data = method, timeout = 3).read()
-    TYPE = resp.decode("utf-8")
-    return json.loads(TYPE)["type"]
+    try:
+        resp = urllib.request.urlopen(req, data = method, timeout = 3).read()
+        TYPE = resp.decode("utf-8")
+        return json.loads(TYPE)["type"]
+    except (timeout, TimeoutError, URLError):
+        print("[Timeout Error]", end=' ')
+        personality_type(forms, url="https://www.16personalities.com/test-results")
 
 
 df = pd.read_csv("MBTI .csv", skiprows=0).iloc[:, 2:62].astype(dtype='int32', errors='ignore')
@@ -33,6 +39,6 @@ rows, cols = df.shape
 dummy_array = np.array([-3] * rows * cols).reshape(rows, cols)
 final_array = np.array(df + dummy_array)
 for i, forms in enumerate(final_array):
-    print(f'> REMAINING: {rows - i - 1}/{rows}')
+    print(f'> REMAINING: {rows - i - 1}/{rows}', end=' ')
     t = personality_type(forms)
     print(t)
